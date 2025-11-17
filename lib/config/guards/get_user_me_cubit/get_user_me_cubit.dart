@@ -1,4 +1,3 @@
-
 import 'package:app_starter/config/guards/user_me.dart';
 import 'package:app_starter/config/network/mixins/failure_popups.dart';
 import 'package:app_starter/config/utils/util_functions.dart';
@@ -6,15 +5,13 @@ import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'get_user_me_state.dart';
+
 part 'get_user_me_cubit.freezed.dart';
 
 class GetUserMeCubit extends Cubit<GetUserMeState> with FailurePopups {
-  final GetUserMeUsecase _getUserMeUsecase;
+  // final GetUserMeUsecase _getUserMeUsecase;
 
-  GetUserMeCubit({
-    required GetUserMeUsecase getUserMeUsecase,
-  })  : _getUserMeUsecase = getUserMeUsecase,
-        super(const GetUserMeState.initial());
+  GetUserMeCubit() : super(const GetUserMeState.initial());
 
   /// Fetch current user's role and permissions
   ///
@@ -25,19 +22,19 @@ class GetUserMeCubit extends Cubit<GetUserMeState> with FailurePopups {
     emit(const GetUserMeState.loading());
 
     // Call the use case
-    final result = await _getUserMeUsecase();
-
-    result.fold(
-      (failure) {
-        final message = getFailureMessage(failure, isEn);
-        emit(GetUserMeState.failed(message: message));
-      },
-      (userMe) {
-        UtilFunctions.appLog("getUserMe: Success - Role: ${userMe.roleName}");
-        UtilFunctions.appLog("getUserMe: Permissions: ${userMe.permissions}");
-        emit(GetUserMeState.success(userMe: userMe));
-      },
-    );
+    // final result = await _getUserMeUsecase();
+    //
+    // result.fold(
+    //   (failure) {
+    //     final message = getFailureMessage(failure, isEn);
+    //     emit(GetUserMeState.failed(message: message));
+    //   },
+    //   (userMe) {
+    //     UtilFunctions.appLog("getUserMe: Success - Role: ${userMe.roleName}");
+    //     UtilFunctions.appLog("getUserMe: Permissions: ${userMe.permissions}");
+    //     emit(GetUserMeState.success(userMe: userMe));
+    //   },
+    // );
   }
 
   /// Check if user has a specific permission
@@ -49,32 +46,30 @@ class GetUserMeCubit extends Cubit<GetUserMeState> with FailurePopups {
   }
 
   Future<void> getUserMeInBackground({required bool isEn}) async {
-    UtilFunctions.appLog("getUserMe: Fetching user role and permissions in Background");
-
-    // Call the use case
-    final result = await _getUserMeUsecase();
-
-    result.fold(
-          (failure) {
-        final message = getFailureMessage(failure, isEn);
-        emit(GetUserMeState.failed(message: message));
-      },
-          (userMe) {
-        UtilFunctions.appLog("getUserMe: Success - Role: ${userMe.roleName}");
-        UtilFunctions.appLog("getUserMe: Permissions: ${userMe.permissions}");
-        emit(GetUserMeState.success(userMe: userMe));
-      },
-    );
+    // UtilFunctions.appLog(
+    //   "getUserMe: Fetching user role and permissions in Background",
+    // );
+    //
+    // // Call the use case
+    // final result = await _getUserMeUsecase();
+    //
+    // result.fold(
+    //   (failure) {
+    //     final message = getFailureMessage(failure, isEn);
+    //     emit(GetUserMeState.failed(message: message));
+    //   },
+    //   (userMe) {
+    //     UtilFunctions.appLog("getUserMe: Success - Role: ${userMe.roleName}");
+    //     UtilFunctions.appLog("getUserMe: Permissions: ${userMe.permissions}");
+    //     emit(GetUserMeState.success(userMe: userMe));
+    //   },
+    // );
   }
-
 
   /// Check multiple permissions with hasAll flag
   /// If hasAll is true, user must have ALL permissions (AND logic)
   /// If hasAll is false, user must have ANY permission (OR logic) - default
-  bool hasPermissions(
-    List<String> permissions, {
-    bool hasAll = false,
-  }) {
+  bool hasPermissions(List<String> permissions, {bool hasAll = false}) {
     return state.maybeWhen(
       success: (userMe) => userMe.hasPermissions(permissions, hasAll: hasAll),
       orElse: () => false,
@@ -90,10 +85,7 @@ class GetUserMeCubit extends Cubit<GetUserMeState> with FailurePopups {
   }
 
   /// Check multiple roles
-  bool hasRoles(
-    List<String> roles, {
-    bool hasAll = false,
-  }) {
+  bool hasRoles(List<String> roles, {bool hasAll = false}) {
     return state.maybeWhen(
       success: (userMe) => userMe.hasRoles(roles, hasAll: hasAll),
       orElse: () => false,
