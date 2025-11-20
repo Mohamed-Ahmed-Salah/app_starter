@@ -258,22 +258,10 @@ Future<void> splashInit() async {
 
   // Parallel initialization of feature services
   await Future.wait([
-    _controllersInit(),              // Biometric, Security controllers
     sl<ThemeConfigService>().initialize(),
-    _employeesInit(),               // Employee repos, use cases
     _profileInit(),                 // Profile cubit & services
     _authInit(),                    // Auth services
-    _leavesInit(),                  // Leave management
-    _aiChatInit(),                  // AI chat services
-    _attendanceLocationsInit(),     // Location management
-    _departmentsInit(),             // Department services
-    _roleManagementInit(),          // Role services
-    _userManagementInit(),          // User management
-    _justificationInit(),           // Justification services
-    _employeesAttendanceHistoryInit(),
-    _attendanceHistoryInit(),
-    _checkInInit(),                 // Check-in/out, break services
-    _activityInit(),                // Activity services
+   _otherServicesInit(),			// Other Service Init
   ]);
 }
 ```
