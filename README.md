@@ -538,10 +538,6 @@ UtilFunctions.appLog("Session token: ${sessionToken != null}");
 
 ## Pages Structure
 
-> Note: some pages use animations package so its not in stack and not pushed using go route.
-> VacationBalance, AttendanceHistory & LeaveRequestDetailsView
-> Home view doesn't have its children right bellow it but in design its navigated from home
-
 ![My Graph](./docs/D4.png)
 
 
@@ -563,86 +559,21 @@ graph LR
     
     %% MainNav branches
     MainNav --> Home[HomeView]
-    MainNav --> Supervisors[SupervisorsEmployeesView]
-    MainNav --> Leave[LeaveRequestView]
-    Leave --> LeaveDetails[LeaveRequestDetailsView]
+    MainNav --> Search[SearchView]
+    MainNav --> OtherPage[OtherPageView]
     MainNav --> Profile[ProfileView]
-    MainNav --> FaceScanner[FaceScannerScreen]
-    FaceScanner --> SubmitPicture[SubmitPictureView]
-    Supervisors --> EmployeeProfile[EmployeeProfileView]
-    Profile --> AttendanceHistory[AttendanceHistoryView]
+    Profile --> ProfileDetails[ProfileDetailsView]
     Profile --> Settings[SettingsView]
-    Profile --> VacationBalance[VacationBalanceView]
     Settings--> Language[LanguageView]
 
     %% Additional standalone routes
-    Home --> NewRequest[NewRequestView]
-    Home --> JustificationForm[JustificationFormView]
-    Home--> JustificationHistory[JustificationHistoryView]
-    Home --> ManualAttendance[ManualAttendanceRequestHistoryView]
-    Home --> EmployeesAttendance[EmployeesAttendanceView]
-    EmployeesAttendance --> FilterEmployees[FilterEmployeesView]
-
-```
----
-
-### Go Route App Structure
-
-![My Graph](./docs/D5.png)
-
-```mermaid
-graph LR
-    Splash[SplashView] --> Onboarding[OnBoardingView]
-    Splash --> ForceUpdate[ForceUpdateView]
-    Splash --> Auth[Auth Screens]
-
-    %% Auth screens
-    Auth --> Login[LoginView]
-    Auth --> Signup[SignupView]
-    Auth --> ForgotPassword[ForgotPasswordView]
-    ForgotPassword --> OTP[OtpView]
-    OTP --> Reset[ResetPasswordView]
-
-    %% Main navigation (StatefulShell)
-    Splash --> MainNav[MainNavView]
-    
-    %% MainNav branches
-    MainNav --> Home[HomeView]
-    MainNav --> Supervisors[SupervisorsEmployeesView]
-    Supervisors --> EmployeeProfile[EmployeeProfileView]
-    MainNav --> Leave[LeaveRequestView]
-    MainNav --> Profile[ProfileView]
-    Profile --> AttendanceHistory[AttendanceHistoryView]
-    Profile --> Settings[SettingsView]
-
-    %% Additional standalone routes
-    Splash --> Temp[TempView]
-    Splash --> NewRequest[NewRequestView]
-    Splash --> FaceScanner[FaceScannerScreen]
-    FaceScanner --> SubmitPicture[SubmitPictureView]
-    Splash --> JustificationForm[JustificationFormView]
-    Splash --> JustificationHistory[JustificationHistoryView]
-    Splash --> ManualAttendance[ManualAttendanceRequestHistoryView]
-    Splash --> EmployeesAttendance[EmployeesAttendanceView]
-    EmployeesAttendance --> FilterEmployees[FilterEmployeesView]
+    Home --> RecentActivity[RecentActivityView]
 
 ```
 
 ---
 ## Notes:
 ###Packages
-- **device_info_plus:**
-  Android ID (androidInfo.id)
-
-Unique per app signing key and user
-Persists across app reinstalls (same signing key)
-Changes if user factory resets device or changes signing key
-
-iOS identifierForVendor (iosInfo.identifierForVendor)
-
-Unique per vendor (apps from same developer share it)
-Resets if user uninstalls ALL apps from that vendor
-Returns null if unavailable
 
 ---
 
