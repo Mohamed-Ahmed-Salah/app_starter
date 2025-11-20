@@ -31,6 +31,17 @@ class ServerFailure extends Failure {
     : this(message: e.message, statusCode: e.statusCode);
 }
 
+class UnauthenticatedFailure extends Failure {
+  const UnauthenticatedFailure({
+    required super.message,
+    required super.statusCode,
+    super.errors = const [],
+  });
+
+  UnauthenticatedFailure.fromException(UnauthenticatedException e)
+    : this(message: e.message, statusCode: e.statusCode);
+}
+
 class NoInternetFailure extends Failure {
   const NoInternetFailure({
     required super.message,
@@ -61,7 +72,7 @@ class FormatParserFailure extends Failure {
   });
 
   FormatParserFailure.fromException(FormatParserException e)
-      : this(message: e.message, statusCode: e.statusCode);
+    : this(message: e.message, statusCode: e.statusCode);
 }
 
 class GeneralFailure extends Failure {

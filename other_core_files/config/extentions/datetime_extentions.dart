@@ -1,5 +1,6 @@
 import 'package:attendance/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
 
 extension DateTimeFormatting on DateTime {
   /// Formats the DateTime object into a string like "Mon Dec 25 2023".
@@ -19,7 +20,11 @@ extension DateTimeFormatting on DateTime {
   }
 
   String toDateWithSlash() {
-    return '${day.toString().padLeft(2, '0')}/${month.toString().padLeft(2, '0')}/$year';
+    return "${day.toString().padLeft(2, '0')}-${month.toString().padLeft(2, '0')}-$year";
+  }
+
+  String toYyyyMmDd() {
+    return "$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}";
   }
 
   String toHHmm() {
@@ -47,5 +52,17 @@ extension DateTimeFormatting on DateTime {
       // Different month or year → Oct 9 - Nov 10
       return '${monthDay.format(this)} - ${monthDay.format(to)}';
     }
+  }
+
+  String toHomeFormat() {
+    return DateFormat('EEE, MMM d yyyy').format(this);
+  }
+
+  String toHomeFormatWithoutWeekday() {
+    return DateFormat('MMM d yyyy').format(this);
+  }
+
+  String dayName(String local) {
+    return DateFormat.E(local).format(this);
   }
 }

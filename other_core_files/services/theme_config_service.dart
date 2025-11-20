@@ -85,7 +85,9 @@ class ThemeConfigService with ChangeNotifier {
       ),
       listTileTheme: ListTileThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(SizeConstants.innerBorderRadius), // 👈 splash respects this
+          borderRadius: BorderRadius.circular(
+            SizeConstants.innerBorderRadius,
+          ), // 👈 splash respects this
         ),
       ),
 
@@ -167,7 +169,7 @@ class ThemeConfigService with ChangeNotifier {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colours.primaryColor,
-          disabledBackgroundColor: Colours.primaryColor,
+          disabledBackgroundColor: Colours.primaryColor.withValues(alpha: 0.6),
           disabledForegroundColor: Colours.kBlack,
           foregroundColor: Colours.kBlack,
           minimumSize: Size(double.infinity, 50),
@@ -203,7 +205,6 @@ class ThemeConfigService with ChangeNotifier {
           fontWeight: FontWeight.w500,
           fontFamily: DefaultThemeConstants.fontFamily,
         ),
-        
 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.all(
@@ -263,7 +264,9 @@ class ThemeConfigService with ChangeNotifier {
       ),
       listTileTheme: ListTileThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(SizeConstants.innerBorderRadius), // 👈 splash respects this
+          borderRadius: BorderRadius.circular(
+            SizeConstants.innerBorderRadius,
+          ), // 👈 splash respects this
         ),
       ),
       colorScheme: ColorScheme.fromSwatch(
@@ -349,7 +352,7 @@ class ThemeConfigService with ChangeNotifier {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          disabledBackgroundColor: primaryColor,
+          disabledBackgroundColor: primaryColor.withValues(alpha: 0.6),
           disabledForegroundColor: Colours.kBlack,
           foregroundColor: Colours.kBlack,
           minimumSize: Size(double.infinity, 50),
@@ -386,7 +389,6 @@ class ThemeConfigService with ChangeNotifier {
           fontWeight: FontWeight.w500,
           fontFamily: DefaultThemeConstants.fontFamily,
         ),
-        
 
         // prefixIconColor: AppColors.primaryColor,
         border: OutlineInputBorder(

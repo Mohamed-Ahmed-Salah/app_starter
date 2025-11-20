@@ -1,28 +1,36 @@
 import 'package:attendance/core/errors/error_const.dart';
+import 'package:attendance/core/errors/exceptions.dart';
 import 'package:attendance/core/errors/failures.dart';
 import 'package:attendance/core/utils/util_functions.dart';
 
-mixin FailurePopups{
-  void showToast(Failure failure , bool isEn){
+mixin FailurePopups {
+  String getFailureMessage(Failure failure, bool isEn) {
     if (failure is GeneralFailure) {
-      UtilFunctions.showSnackBar(
-        message:
-        "${failure.message} ${failure.statusCode} \n${failure.errors.join('\n')}",
-      );
+      return "${failure.message} ${failure.statusCode} \n${failure.errors.join('\n')}";
     } else if (failure is NoInternetFailure) {
       String message = isEn
           ? ErrorConst.noInternetMessageEn
           : ErrorConst.noInternetMessageAr;
-      UtilFunctions.showSnackBar(message: "$message ${failure.statusCode}");
+      return "$message ${failure.statusCode}";
+    } else if (failure is FormatParserException ||
+        failure is FormatParserFailure) {
+      String message = isEn
+          ? ErrorConst.parsingErrorMessageEn
+          : ErrorConst.parsingErrorMessageAr;
+      return "$message ${failure.statusCode}";
     } else if (failure is TimeOutFailure) {
       String message = isEn
           ? ErrorConst.timeoutMessageEn
           : ErrorConst.timeoutMessageEn;
-      UtilFunctions.showSnackBar(message: "$message ${failure.statusCode}");
+      return "$message ${failure.statusCode}";
     } else {
-      UtilFunctions.showSnackBar(
-        message: "${failure.message} ${failure.statusCode}",
-      );
+      return "${failure.message} ${failure.statusCode}";
     }
+  }
+
+  String showToast(Failure failure, bool isEn) {
+    final message = getFailureMessage(failure, isEn);
+    UtilFunctions.showSnackBar(message: message);
+    return message;
   }
 }

@@ -1,4 +1,5 @@
 import 'package:attendance/core/constants/default_theme_firebase_constants.dart';
+import 'package:attendance/core/constants/text_constants.dart';
 import 'package:attendance/core/utils/util_functions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,9 +52,9 @@ class CacheService {
     return auth;
   }
 
-  String? getLanguage() {
-    final language = _prefs.getString(_language);
-    return language;
+  Future<String> getLanguage() async {
+    final language = await _prefs.getString(_language);
+    return language ?? TextConstants.starterLangCode;
   }
 
   Future<bool> setOrganizationId(String organizationId) async {

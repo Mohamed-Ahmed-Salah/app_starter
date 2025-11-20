@@ -20,6 +20,8 @@ mixin ErrorHandler {
       return Left(GeneralFailure.fromException(e));
     } on FormatParserException catch (e) {
       return Left(FormatParserFailure.fromException(e));
+    } on UnauthenticatedException catch (e) {
+      return Left(UnauthenticatedFailure.fromException(e));
     } catch (e) {
       return Left(
         ServerFailure.fromException(

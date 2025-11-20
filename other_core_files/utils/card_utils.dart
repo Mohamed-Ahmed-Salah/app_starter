@@ -80,10 +80,10 @@ class CardUtils {
     return year;
   }
 
-  static List<String> getExpiryDate(String value) {
-    var split = value.split(RegExp(r'(/)'));
-    return [split[0].trim(), split[1].trim()];
-  }
+  // static List<String> getExpiryDate(String value) {
+  //   var split = value.split(RegExp(r'(/)'));
+  //   return [split[0].trim(), split[1].trim()];
+  // }
 
   static String getCleanedNumber(String text) {
     RegExp regExp = RegExp(r'[^0-9]');
@@ -124,7 +124,7 @@ class CardUtils {
   }
 
   static String getFormattedCardNumber(String number) {
-    final company = CardUtils.getCardCompanyFromNumber(number);
+    final company = getCardCompanyFromNumber(number);
 
     var buffer = StringBuffer();
 

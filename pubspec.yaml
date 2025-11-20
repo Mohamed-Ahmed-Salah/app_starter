@@ -41,6 +41,17 @@ dependencies:
   shared_preferences:
   flutter_bloc: ^9.1.1
   freezed:
+  #  Firebase packages
+  firebase_core: ^4.2.1
+  firebase_crashlytics: ^5.0.5
+  firebase_remote_config: ^6.1.2
+  firebase_analytics: ^12.0.4
+  firebase_messaging: ^16.0.4
+  flutter_local_notifications: ^19.5.0
+  #  added for schedule push notifications
+  timezone: ^0.10.1
+  flutter_native_timezone: ^2.0.0
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

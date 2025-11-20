@@ -20,6 +20,7 @@ abstract class Media {
   static const pdfSvg = '$_baseSvg/pdf.svg';
   static const excelSvg = '$_baseSvg/excel.svg';
   static const pngSvg = '$_baseSvg/png.svg';
+  static const fileDriveSvg = '$_baseSvg/insert_drive_file.svg';
 
   static const visibleIcon = Icons.visibility;
   static const visibleOffIcon = Icons.visibility_off;
@@ -44,6 +45,7 @@ abstract class Media {
   static const faceIcon = Icons.face;
   static const locationIcon = Icons.location_on;
   static const locationOutlineIcon = Icons.location_on_outlined;
+  static const locationDisabledIcon = Icons.location_off_outlined;
   static const myLocationIcon = Icons.my_location;
   static const navigateToLocationIcon = Icons.north_west;
   static const clockIcon = Icons.access_time;
@@ -56,7 +58,10 @@ abstract class Media {
   static const forwardIcon = Icons.arrow_forward_ios;
   static const moneyIcon = Icons.attach_money;
   static const arrowDownIcon = Icons.keyboard_arrow_down;
+  static const arrowRightIcon = Icons.chevron_right;
   static const documentIcon = Icons.description_outlined;
+  static const insertDocumentFillIcon = Icons.insert_drive_file;
+  static const insertDocumentOutlineIcon = Icons.insert_drive_file_outlined;
   static const settingsIcon = Icons.settings;
   static const categoryIcon = Icons.category_outlined;
   static const chatIcon = Icons.comment_outlined;
@@ -115,6 +120,7 @@ abstract class Media {
   static const IconData refreshIcon = Icons.refresh;
   static const IconData subscribeIcon = Icons.rocket_launch_outlined;
   static const IconData departmentIcon = Icons.business;
+  static const IconData homeIcon = Icons.home;
 
   // Add these to your existing assets
   static const String aliceImage =

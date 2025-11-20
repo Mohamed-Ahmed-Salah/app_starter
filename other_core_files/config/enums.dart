@@ -20,24 +20,10 @@ enum AttendanceDayType {
 
 enum RequestStatus { approved, pending, rejected }
 
-enum RequestType {
-  annual,
-  condolence,
-  hajj,
-  marriage,
-  medical,
-  paternity,
-  unpaid,
-  hr,
-  emergency,
-}
+
 
 enum PaymentType { continues, advanced }
 
-enum HrRequestType { vacation, salary }
-
-/// check if leave or request type is same.... ????
-enum LeaveType { annual, sick, emergency, maternity, paternity, unpaid }
 
 enum AuthenticationStatus {
   initial,
@@ -59,11 +45,41 @@ enum JustificationType { late, fullDay, earlyLeave }
 enum AttendanceCheckRequest { checkIn, checkOut, breakIn, breakOut }
 
 // Document type enum
-enum DocumentType { pdf, excel, word, image }
+enum DocumentType {
+  pdf("application/pdf"),
+  excel("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+  word("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+  image("image/png");
 
-enum EmployeeAccountType { supervisor, employee, client, admin }
+  const DocumentType(String name);
+}
+
+// enum EmployeeAccountType { supervisor, employee, client, admin }
 
 enum MinVersionForceUpdate { update, okay, couldNotFetch }
 
-
 enum CardCompany { amex, visa, master, mada }
+
+enum EmergencyContactMedium {
+  phone("phone"),
+  email("email"),
+  whatsapp("whatsapp");
+
+  const EmergencyContactMedium(String name);
+}
+
+enum NotificationType {
+  checkoutReminder,    // Navigate to check-in/out screen
+  leaveApproved,       // Navigate to leave history
+  leavePending,        // Navigate to pending leaves
+  attendanceAlert,     // Navigate to attendance history
+  general;             // No navigation, just show notification
+
+  static NotificationType fromString(String? value) {
+    return NotificationType.values.firstWhere(
+          (e) => e.name == value,
+      orElse: () => NotificationType.general,
+    );
+  }
+}
+

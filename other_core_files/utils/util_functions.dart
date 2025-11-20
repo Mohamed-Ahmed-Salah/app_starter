@@ -6,10 +6,13 @@ import 'package:attendance/core/res/media.dart';
 import 'package:attendance/core/res/styles/colours.dart';
 import 'package:attendance/core/services/notification_service.dart';
 import 'package:attendance/core/widgets/approval_rejection_bottom_sheet.dart';
+import 'package:attendance/core/widgets/confirmation_dialog.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hive/hive.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -52,26 +55,51 @@ abstract class UtilFunctions {
     // );
   }
 
+  static void showLoader(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (BuildContext context) {
+        return PopScope(
+          canPop: false, // Prevent dismissing with back button
+          child: Center(
+            child: Container(
+              // width: 100,
+              // height: 100,
+              decoration: BoxDecoration(
+                color: Colours.kWhite,
+                borderRadius: BorderRadius.circular(
+                  SizeConstants.fullBorderRadius,
+                ),
+              ),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   static void appLog(String message) {
     if (!kReleaseMode) {
       // prints only in debug or profile
-      debugPrint(message);
+      debugPrintThrottled(message);
     }
   }
 
   /// Request Location Permission
   static Future<bool> requestLocationPermission() async {
-    print("Starting permission request...");
+    debugPrintThrottled("Starting permission request...");
     var status = await Permission.location.request();
-    print("First permission result: $status");
+    debugPrintThrottled("First permission result: $status");
 
     if (status.isGranted) {
       return status.isGranted;
     } else if (status.isPermanentlyDenied || status.isDenied) {
-      print("First permission denied, returning false");
+      debugPrintThrottled("First permission denied, returning false");
       return false;
     }
-    print("Unexpected case, returning false");
+    debugPrintThrottled("Unexpected case, returning false");
     return false;
   }
 
@@ -81,7 +109,7 @@ abstract class UtilFunctions {
   requestLocationAlwaysInBackgroundPermission() async {
     final status = await Permission.location.status;
     if (status.isGranted) {
-      print("Starting alwaysStatus permission request...");
+      debugPrintThrottled("Starting alwaysStatus permission request...");
       var locationStatus = await Permission.locationAlways.request();
 
       return locationStatus;
@@ -171,6 +199,35 @@ abstract class UtilFunctions {
           ),
         ],
       ),
+    );
+  }
+
+  static Future<bool?> showConfirmationDialog({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    // required IconData icon,
+    required VoidCallback onConfirm,
+    String? confirmText,
+    String? cancelText,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConfirmationDialogWidget(
+            title: title,
+            subtitle: subtitle,
+            onConfirm: onConfirm,
+            confirmText: confirmText,
+            cancelText: cancelText,
+          ),
+        );
+      },
     );
   }
 
@@ -335,11 +392,11 @@ abstract class UtilFunctions {
 
   static void showRequestApprovalRejectionBottomSheet(
     BuildContext context, {
-    required String id,
+    required int id,
     required RequestStatus status,
     required String title,
     required String subtitle,
-    required Function(String, String) onConfirm,
+    required Function(int, String) onConfirm,
   }) {
     showModalBottomSheet(
       context: context,
@@ -368,62 +425,6 @@ abstract class UtilFunctions {
     );
   }
 
-  static String getEmployeeAccountType(
-    EmployeeAccountType type,
-    AppLocalizations? text,
-  ) {
-    switch (type) {
-      case EmployeeAccountType.employee:
-        return "${text?.employee}";
-      case EmployeeAccountType.supervisor:
-        return "${text?.supervisor}";
-      case EmployeeAccountType.client:
-        return "${text?.client}";
-      case EmployeeAccountType.admin:
-        return "${text?.admin}";
-    }
-  }
-
-  static String hrRequestTypeLocalizedText(
-    BuildContext context,
-    HrRequestType type,
-  ) {
-    final text = AppLocalizations.of(context);
-    switch (type) {
-      case HrRequestType.vacation:
-        return text?.hrRequestTypeVacation ?? 'Vacation';
-      case HrRequestType.salary:
-        return text?.hrRequestTypeSalary ?? 'Salary';
-    }
-  }
-
-  static String requestTypeLocalizedText(
-    BuildContext context,
-    RequestType type,
-  ) {
-    final text = AppLocalizations.of(context);
-    switch (type) {
-      case RequestType.annual:
-        return text?.annualLeave ?? 'Annual Leave';
-      case RequestType.condolence:
-        return text?.condolenceLeave ?? 'Condolence Leave';
-      case RequestType.hajj:
-        return text?.hajjLeave ?? 'Hajj Leave';
-      case RequestType.marriage:
-        return text?.marriageLeave ?? 'Marriage Leave';
-      case RequestType.medical:
-        return text?.medicalLeave ?? 'Medical Leave';
-      case RequestType.paternity:
-        return text?.paternityLeave ?? 'Paternity Leave';
-      case RequestType.unpaid:
-        return text?.unpaidLeave ?? 'Unpaid Leave';
-      case RequestType.hr:
-        return text?.hrRequest ?? 'HR Request';
-      case RequestType.emergency:
-        return text?.emergencyRequest ?? 'Emergency Request';
-    }
-  }
-
   static String paymentTypeLocalizedText(
     BuildContext context,
     PaymentType type,
@@ -434,6 +435,22 @@ abstract class UtilFunctions {
         return text?.paymentTypeContinues ?? 'Continues Payment';
       case PaymentType.advanced:
         return text?.paymentTypeAdvanced ?? 'Advanced Payment';
+    }
+  }
+
+  static String emergencyContactMediumLocalizedText(
+    BuildContext context,
+    EmergencyContactMedium medium,
+  ) {
+    final text = AppLocalizations.of(context);
+
+    switch (medium) {
+      case EmergencyContactMedium.phone:
+        return '${text?.emergencyContactPhone}';
+      case EmergencyContactMedium.email:
+        return '${text?.emergencyContactEmail}';
+      case EmergencyContactMedium.whatsapp:
+        return '${text?.emergencyContactWhatsApp}';
     }
   }
 }

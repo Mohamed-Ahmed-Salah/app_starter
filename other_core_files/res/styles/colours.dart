@@ -84,7 +84,7 @@ abstract class Colours {
   static const Color mapPin = Color(0xFF587a6f); // Primary color for map pin
 
   static const Color errorColor = Color(0xFFF54135);
-  static const Color greenSuccess = Color(0xFF24CE9F);
+  static const Color greenSuccess = Color(0xFF0D7C66);
   static const Color yellowWarningColor = Color(0xFFF2B325);
   static const Color onLeaveColor = Color(0xFF2196F3);
 

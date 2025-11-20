@@ -1,5 +1,6 @@
 import 'package:attendance/core/services/cache_service.dart';
 import 'package:attendance/core/services/injection_container.dart';
+import 'package:attendance/core/utils/util_functions.dart';
 import 'package:flutter/foundation.dart';
 
 abstract class NetworkConstants {
@@ -14,12 +15,10 @@ abstract class NetworkConstants {
 
   static const headers = {'Content-Type': 'application/json; charset=UTF-8'};
   static const pageSize = 10;
-  static const timeout = 20;
+  static const timeout = 30;
 
   /// in seconds
   static const minimumFetchInterval = 24;
-
-  /// in hours
 
   static Future<Map<String, String>> getHeaders({
     String contentType = "application/json",
@@ -36,11 +35,12 @@ abstract class NetworkConstants {
     String contentType = "application/json",
   }) async {
     final token = await sl<CacheService>().getSessionToken() ?? "";
-    final language = sl<CacheService>().getLanguage() ?? "en";
+    UtilFunctions.appLog("TOKEN $token");
+    final language = await sl<CacheService>().getLanguage();
     Map<String, String> headers = <String, String>{
       "Cache-Control": "no-cache",
       "Content-Type": contentType,
-      "token": "Bearer $token",
+      "Authorization": "Bearer $token",
       "language": language,
       "Accept": contentType,
     };

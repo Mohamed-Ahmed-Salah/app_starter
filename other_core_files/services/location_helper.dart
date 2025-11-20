@@ -12,7 +12,7 @@ enum LocationPermissionCus { success, rejected, notAvailable }
 ///todo remove change notifier from here... and remove the call back function.
 /// A helper class for handling location services
 class LocationHelper with ChangeNotifier {
-  String userLocation = 'No data'; // Stores the location data
+  String userLocation = ''; // Stores the location data
 
   ///distance in meter to update the location
   static const int _minDistanceToUpdate = 50;

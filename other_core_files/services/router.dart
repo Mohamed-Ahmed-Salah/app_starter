@@ -1,20 +1,23 @@
+import 'package:attendance/core/services/injection_container.dart';
 import 'package:attendance/core/utils/util_functions.dart';
 import 'package:attendance/core/widgets/protected_route_wrapper.dart';
 import 'package:attendance/src/add_new_user_form/presentation/add_new_users.dart';
 import 'package:attendance/src/ai_agent_chat/presentation/views/ai_chat_view.dart';
 import 'package:attendance/src/attendance_locations/presentation/view/attendance_location_map.dart';
-import 'package:attendance/src/attendance_locations/presentation/view/users_locations_attendance.dart';
+import 'package:attendance/src/auth/domain/entity/forgot_password_response.dart';
 import 'package:attendance/src/auth/presentation/view/forgot_password_view.dart';
 import 'package:attendance/src/auth/presentation/view/login_view.dart';
 import 'package:attendance/src/auth/presentation/view/otp_view.dart';
 import 'package:attendance/src/auth/presentation/view/reset_password_view.dart';
 import 'package:attendance/src/auth/presentation/view/signup_view.dart';
-import 'package:attendance/src/check_in/presentation/app/page_providers/face_overlay_position_provider.dart';
-import 'package:attendance/src/check_in/presentation/view/check_in_view.dart';
-import 'package:attendance/src/check_in/presentation/view/manual_checkin_form.dart';
-import 'package:attendance/src/check_in/presentation/view/submit_picture_view.dart';
+import 'package:attendance/src/check_in_out/presentation/app/page_providers/face_overlay_position_provider.dart';
+import 'package:attendance/src/check_in_out/presentation/view/check_in_out_view.dart';
+import 'package:attendance/src/check_in_out/presentation/view/manual_checkin_form.dart';
+import 'package:attendance/src/check_in_out/presentation/view/submit_picture_view.dart';
+import 'package:attendance/src/employee_profile/presnetation/view/employee_profile.dart';
+import 'package:attendance/src/clients_company_employees/presentation/view/clients_employees_view.dart';
 import 'package:attendance/src/deraprtment_group/domain/entity/department_entity.dart';
-import 'package:attendance/src/deraprtment_group/presentation/app/cubit/update_department_cubit.dart';
+import 'package:attendance/src/deraprtment_group/presentation/app/update_department_cubit/update_department_cubit.dart';
 import 'package:attendance/src/deraprtment_group/presentation/views/departments_view.dart';
 import 'package:attendance/src/deraprtment_group/presentation/views/new_department_form.dart';
 import 'package:attendance/src/deraprtment_group/presentation/views/update_department_view.dart';
@@ -30,24 +33,27 @@ import 'package:attendance/src/leave_requests/presentation/view/leave_request_vi
 import 'package:attendance/src/new_request/presentation/view/new_request_view.dart';
 import 'package:attendance/src/onboarding/presentation/view/onboarding_view.dart';
 import 'package:attendance/src/payment_view/presentation/views/payment_view.dart';
+import 'package:attendance/src/profile/domain/entity/user_profile_response.dart';
 import 'package:attendance/src/profile/presentation/view/profile_view.dart';
 import 'package:attendance/src/settings/presentation/view/settings_view.dart';
 import 'package:attendance/src/splash/presentation/view/splash_view.dart';
 import 'package:attendance/src/subscription/presentation/view/subscriptions_view.dart';
-import 'package:attendance/src/supervisors_employees/domain/entity/employee.dart';
-import 'package:attendance/src/supervisors_employees/presentation/view/employee_profile.dart';
-import 'package:attendance/src/supervisors_employees/presentation/view/supervisors_employees_view.dart';
+import 'package:attendance/src/supervirosrs_employees/presentation/view/supervisors_employees_view.dart';
 import 'package:attendance/src/temp/presentation/view/location_map.dart';
 import 'package:attendance/src/temp/presentation/view/temp_view.dart';
+import 'package:attendance/src/update_profile/presentation/views/create_profile_view.dart';
+import 'package:attendance/src/users_leaves_requests_history/presentation/view/UserLeavesHistory.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:location/location.dart';
 import 'package:provider/provider.dart';
 
 import '../../src/attendance_history/presentation/view/attendance_history_view.dart';
-import '../../src/check_in/presentation/app/page_providers/camera_provider.dart';
-import '../../src/check_in/presentation/app/page_providers/location_provider.dart';
+import '../../src/check_in_out/presentation/app/check_in_permission_cubit/check_in_permission_cubit.dart';
+import '../../src/check_in_out/presentation/app/page_providers/camera_provider.dart';
+import '../../src/check_in_out/presentation/app/page_providers/location_provider.dart';
 import '../../src/employees_attendance/presentation/view/filter_employees_view.dart';
 import '../../src/manual_attendance_request_history/presentation/view/manual_attendance_request_history_view.dart';
 
@@ -100,12 +106,15 @@ final router = GoRouter(
         GoRoute(
           path: OtpView.name,
           name: OtpView.name,
-          builder: (context, state) => const OtpView(),
+          builder: (context, state) => OtpView(
+            forgotPasswordResponse: state.extra as ForgotPasswordResponse,
+          ),
           routes: [
             GoRoute(
               path: ResetPasswordView.name,
               name: ResetPasswordView.name,
-              builder: (context, state) => const ResetPasswordView(),
+              builder: (context, state) =>
+                  ResetPasswordView(resetToken: state.extra as String),
             ),
           ],
         ),
@@ -196,7 +205,7 @@ final router = GoRouter(
                   name: AttendanceHistoryView.name,
                   parentNavigatorKey: _rootNavigatorKey, // full screen
                   builder: (context, state) {
-                    final String id = state.extra as String;
+                    final int id = state.extra as int;
                     return ProtectedRouteWrapper(
                       child: AttendanceHistoryView(id: id),
                     );
@@ -213,16 +222,14 @@ final router = GoRouter(
       path: AttendanceLocationMapView.name,
       name: AttendanceLocationMapView.name,
       builder: (context, state) => const AttendanceLocationMapView(),
-      routes: [
-        GoRoute(
-          path: UsersAttendanceLocationView.name,
-          name: UsersAttendanceLocationView.name,
-          builder: (context, state) {
-            final int id = state.extra as int;
-            return UsersAttendanceLocationView(locationId: id);
-          },
-        ),
-      ],
+    ),
+    GoRoute(
+      path: UserLeaveHistoryView.path,
+      name: UserLeaveHistoryView.path,
+      builder: (context, state) {
+        final id = state.extra as int;
+        return UserLeaveHistoryView(id: id);
+      },
     ),
 
     GoRoute(
@@ -231,6 +238,16 @@ final router = GoRouter(
       parentNavigatorKey: _rootNavigatorKey, // full screen
       builder: (context, state) =>
           const ProtectedRouteWrapper(child: SettingsView()),
+    ),
+
+    GoRoute(
+      path: UpdateProfileView.path,
+      name: UpdateProfileView.name,
+      parentNavigatorKey: _rootNavigatorKey, // full screen
+      builder: (context, state) {
+        UserProfileResponse profile = state.extra as UserProfileResponse;
+        return UpdateProfileView(profile: profile);
+      },
     ),
 
     GoRoute(
@@ -258,9 +275,12 @@ final router = GoRouter(
       builder: (context, state) {
         final department = state.extra as Department;
 
-        ///here because we dont need it.
+        ///here because we dont need it anywhere else.
         return BlocProvider(
-          create: (context) => UpdateDepartmentCubit(department),
+          create: (context) => UpdateDepartmentCubit(
+            department: department,
+            updateDepartmentUsecase: sl(),
+          ),
           child: UpdateDepartmentPage(department: department),
         );
       },
@@ -279,24 +299,32 @@ final router = GoRouter(
     ),
 
     GoRoute(
-      path: FaceScannerScreen.name,
-      name: FaceScannerScreen.name,
+      path: CheckInOutView.name,
+      name: CheckInOutView.name,
       builder: (context, state) {
         final cameras = state.extra as List<CameraDescription>;
 
         final FaceOverlayPositionProvider faceOverlayPositionProvider =
             FaceOverlayPositionProvider();
+        final cameraProvider = CameraProvider(
+          faceOverlayPositionProvider: faceOverlayPositionProvider,
+        );
+        final locationProvider = LocationProvider();
+
+        ///used this way so when leaving the page its disposed.
         return MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (_) => faceOverlayPositionProvider),
-            ChangeNotifierProvider(
-              create: (_) => CameraProvider(
-                faceOverlayPositionProvider: faceOverlayPositionProvider,
+            ChangeNotifierProvider(create: (_) => cameraProvider),
+            ChangeNotifierProvider(create: (_) => locationProvider),
+            BlocProvider(
+              create: (_) => CheckInPermissionCubit(
+                cameraProvider: cameraProvider,
+                locationProvider: locationProvider,
               ),
             ),
-            ChangeNotifierProvider(create: (_) => LocationProvider()),
           ],
-          child: FaceScannerScreen(cameras: cameras),
+          child: CheckInOutView(cameras: cameras),
         );
       },
       routes: [
@@ -307,12 +335,16 @@ final router = GoRouter(
             final params = state.extra as Map<String, dynamic>;
             return SubmitPictureView(
               picturePath: params[SubmitPictureView.pictureParam] as String,
+              currentLocation:
+                  params[SubmitPictureView.currentLocationParam]
+                      as LocationData,
               facesDetected:
                   params[SubmitPictureView.facesDetectedParam] as int,
               location: params[SubmitPictureView.locationParam] as String,
               timestamp: params[SubmitPictureView.timestampParam] as DateTime,
-              startCameraStreamFunction:
-                  params[SubmitPictureView.startCameraStreamFunctionParam],
+              isMocked: params[SubmitPictureView.isMockedParam] as bool,
+              isAlreadyCheckedIn:
+                  params[SubmitPictureView.isAlreadyCheckedInParam] as bool,
             );
           },
         ),
@@ -345,18 +377,18 @@ final router = GoRouter(
       builder: (context, state) => const ManualAttendanceRequestHistoryView(),
     ),
     GoRoute(
-      path: SupervisorsEmployeesView.path,
-      name: SupervisorsEmployeesView.path,
+      path: ClientsEmployeesView.path,
+      name: ClientsEmployeesView.path,
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const SupervisorsEmployeesView(),
+      builder: (context, state) => const ClientsEmployeesView(),
       routes: [
         GoRoute(
-          path: EmployeeProfileView.name,
-          name: EmployeeProfileView.name,
+          path: EmployeeProfileView.clientName,
+          name: EmployeeProfileView.clientName,
           parentNavigatorKey: _rootNavigatorKey,
 
           builder: (context, state) {
-            final id = state.extra as String;
+            final id = state.extra as int;
             // final Employee employee =
             //     params[EmployeeProfileView.employeeParam] as Employee;
             return EmployeeProfileView(id: id);
@@ -371,15 +403,30 @@ final router = GoRouter(
             final Map<String, dynamic> extra =
                 state.extra as Map<String, dynamic>;
 
-            final bool isAdmin =
-                extra[AddNewUserFormView.isAdminExtraParam] as bool;
-            final Employee? employee =
-                extra[AddNewUserFormView.employeeExtraParam] as Employee?;
-            // final Employee employee =
-            //     params[EmployeeProfileView.employeeParam] as Employee;
-            return AddNewUserFormView(isAdmin: isAdmin, employee: employee);
+            return AddNewUserFormView();
           },
         ),
+      ],
+    ),
+    GoRoute(
+      path: SupervisorsEmployeesView.path,
+      name: SupervisorsEmployeesView.path,
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final int departmentId = state.extra as int;
+        return SupervisorsEmployeesView(departmentId: departmentId);
+      },
+      routes: [
+        // GoRoute(
+        //   path: EmployeeProfileView.supervisorsName,
+        //   name: EmployeeProfileView.supervisorsName,
+        //   parentNavigatorKey: _rootNavigatorKey,
+        //
+        //   builder: (context, state) {
+        //     final id = state.extra as int;
+        //     return EmployeeProfileView(id: id);
+        //   },
+        // ),
       ],
     ),
   ],

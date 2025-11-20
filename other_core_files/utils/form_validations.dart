@@ -42,7 +42,6 @@ abstract class TextFormValidation {
 
   static String? requiredField(String? value, {required BuildContext context}) {
     if (value == null ||
-        value == false ||
         value.isEmpty ||
         ((value is Iterable || value is Map) && value.isEmpty)) {
       return "${AppLocalizations.of(context)?.requiredField}";
@@ -95,7 +94,10 @@ abstract class TextFormValidation {
     String? value, {
     required BuildContext context,
   }) {
-    if (value!.isEmpty) return requiredField(value, context: context);
+    print("VALEUE ${value}");
+    if (value == null || value.isEmpty) {
+      return requiredField(value, context: context);
+    }
 
     bool hasNumbers = RegExp(r'[0-9]').hasMatch(value);
     bool hasNumbersAr = RegExp(r'[٠-٩]').hasMatch(value);
