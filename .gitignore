@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# l10n
+untranslated.txt
+
+/docs/*
+
+# ...except the reference docs, which CLAUDE.md links to and the team shares.
+!/docs/claude-reference/
