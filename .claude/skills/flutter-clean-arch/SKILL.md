@@ -1,3 +1,8 @@
+---
+name: flutter-clean-arch
+description: Implement or modify a feature following this project's clean-architecture layers — entity, repo interface, usecase, model, remote datasource, repo impl, freezed cubit + state, DI. Use whenever adding or changing an API endpoint, usecase, repository method, or cubit under lib/src/, or when scaffolding a new feature folder.
+---
+
 # Flutter Clean Architecture Skill
 
 You are a Flutter Clean Architecture expert assistant. Your role is to help developers implement features following the clean architecture pattern used in this project.
@@ -19,12 +24,13 @@ When asked to implement a feature, you MUST:
    ```
    lib/src/{feature_name}/
    ├── data/
-   │   ├── datasource/
+   │   ├── datasources/
    │   ├── models/
-   │   └── repo/
+   │   └── repositories/
    ├── domain/
-   │   ├── entity/
-   │   ├── repo/
+   │   ├── entities/
+   │   │   └── extensions/   ← helpers on this feature's entities/enums
+   │   ├── repositories/
    │   └── usecases/
    └── presentation/
        ├── app/
@@ -40,7 +46,7 @@ When asked to implement a feature, you MUST:
    - Step 5: Data remote datasource (with NetworkCallHandler mixin)
    - Step 6: Data repository implementation (with ErrorHandler mixin)
    - Step 7: Presentation cubit state (with Freezed)
-   - Step 8: Presentation cubit (with FailurePopups mixin)
+   - Step 8: Presentation cubit (emit the full `Failure`; the view renders it)
    - Step 9: Run build_runner
    - Step 10: Dependency injection setup
    - Step 11: Views and widgets
@@ -61,15 +67,27 @@ When asked to implement a feature, you MUST:
    - Methods: camelCase, action-oriented
 
 5. **Error Handling**:
-   - ALWAYS use `getFailureMessage(failure, isEn)` from FailurePopups mixin
-   - ALWAYS include `bool isEn` parameter in cubit methods
+   - ALWAYS emit the full `Failure` object in the `failed` state — never just a message string
+   - Cubits are logic layer: NEVER call `showToast`, `getFailureMessage`, or any UI-related code inside a cubit
+   - Toast/message display belongs in the view layer inside a `BlocListener`, using the `FailureExtension`:
+     ```dart
+     BlocListener<{CubitName}Cubit, {CubitName}State>(
+       listener: (context, state) {
+         if (state is _failedState) {
+           final message = state.failure.getFailureMessage(context);
+           // show toast, snackbar, dialog, etc.
+         }
+       },
+     )
+     ```
+   - `getFailureMessage(context)` is defined in `lib/core/config/extentions/failure_extension.dart` — it returns the backend's own message (plus `errors`) for `GeneralFailure` and a localized generic line for every other failure type, with null-safe locale fallback
    - Emit loading state BEFORE async operations
    - Handle all states: initial, loading, success, failed
 
 6. **Critical Rules**:
    - NEVER create custom form validators - ALWAYS use `TextFormValidation` from `lib/core/utils/form_validations.dart`
    - NEVER use `Localizations.localeOf(context)` - ALWAYS use `AppLocalizations.of(context)?.localeName == 'en'`
-   - ALWAYS use `NetworkConstants.getHeaders()` for API headers
+   - NEVER pass headers manually to Dio calls — `AuthInterceptor` automatically injects `Authorization: Bearer <token>` and `language` on every request; base URL is set globally via `BaseOptions` in `_mainInit()`
    - ALWAYS extract API data using `NetworkConstants.dataParam`
    - Models extend entities, never duplicate
    - One use case = one action
@@ -87,9 +105,83 @@ class {EntityName} {
 }
 ```
 
+#### Entities with per-language fields
+
+When the API returns a value in both languages — `{field}En` and `{field}Ar` — keep both
+fields, and add a getter on the entity that resolves them. **Never branch on the language in
+the UI**: that duplicates the rule at every call site and makes it untestable without a
+widget.
+
+```dart
+class {EntityName} {
+  final String? pdfUrlEn;
+  final String? pdfUrlAr;
+  final String? imageUrlEn;
+  final String? imageUrlAr;
+
+  String? pdfUrl({required bool isEn}) =>
+      _pick(en: pdfUrlEn, ar: pdfUrlAr, isEn: isEn);
+
+  String? imageUrl({required bool isEn}) =>
+      _pick(en: imageUrlEn, ar: imageUrlAr, isEn: isEn);
+
+  /// Prefer the active language, fall back to the other.
+  static String? _pick({
+    String? en,
+    String? ar,
+    required bool isEn,
+  }) => isEn ? en ?? ar : ar ?? en;
+}
+```
+
+Rules:
+
+- **Resolution order:** active language first, then the other language. Content is often
+  published in one language before the other, so the fallback is deliberate, not defensive.
+- **Both null → return `null`.** Don't substitute an empty string or a placeholder. The
+  caller decides what "missing" means — usually hiding the section rather than rendering a
+  dead control.
+- **One `_pick` helper** once the entity has more than one such pair, so the fallback policy
+  lives in exactly one expression and can't drift between fields.
+- **Document the policy once, on `_pick`.** The getters' names already say what they return;
+  a doc comment on each one just restates the code.
+- **Keep the entity Flutter-free.** Take `bool isEn`, not `BuildContext`. Callers pass
+  `context.isEn` (from `core/config/extentions/context_extension.dart`) at the widget
+  boundary.
+- **Named parameter,** never positional — `pdfUrl(true)` is unreadable at the call site.
+- Non-nullable pairs use the same shape without the `??` fallback.
+
+`bool isEn` is the codebase idiom (`context.isEn`, `groupBrands(isEn:)`) and the app ships
+exactly two locales. If a third language is ever added, replace the bool with an enum in
+these getters — that is the only place the change needs to reach.
+
+Reference implementation: `lib/src/products/domain/entities/product.dart` (`name(isEn:)`
+over `nameEn` / `nameAr` via `LocalizedText.pick`).
+
+### Entity Extensions
+
+Anything computed *from* an entity or one of its enums — a localized label, a status
+colour or icon, a derived count, a formatted display string — is an extension, not a
+method on the entity and not inline in a widget. It lives beside the entity:
+
+```
+lib/src/{feature}/domain/entities/
+├── {entity_name}.dart
+└── extensions/
+    └── {entity_name}_extension.dart      ← extension {EntityName}X on {EntityName}
+```
+
+- One file per extended type, named `<Type>X`.
+- The entity file stays Flutter-free. The extension file may import `Colours`, `Media`,
+  `AppLocalizations` and `flutter/material.dart` — that is its job.
+- App-wide extensions on Dart/Flutter/`core/` types (`BuildContext`, `DateTime`, `String`,
+  `num`, `Failure`) stay in `lib/core/config/extentions/`. `core/` never imports from
+  `lib/src/`, so an entity extension can never go there.
+- Widgets call the extension: `order.status.label(text)`, `category.totalChildrenCount`.
+
 ### Domain Repository Interface
 ```dart
-import 'package:attendance/core/config/typedefs.dart';
+import 'package:app_starter/core/config/typedefs.dart';
 
 abstract class {FeatureName}Repo {
   ResultFuture<List<{EntityName}>> getAll();
@@ -102,8 +194,8 @@ abstract class {FeatureName}Repo {
 
 ### Domain Use Case (Without Params)
 ```dart
-import 'package:attendance/core/config/typedefs.dart';
-import 'package:attendance/core/config/usecase.dart';
+import 'package:app_starter/core/config/typedefs.dart';
+import 'package:app_starter/core/config/usecase.dart';
 
 class {ActionName}Usecase extends UsecaseWithoutParams<List<{EntityName}>> {
   const {ActionName}Usecase(this._repo);
@@ -116,8 +208,8 @@ class {ActionName}Usecase extends UsecaseWithoutParams<List<{EntityName}>> {
 
 ### Domain Use Case (With Params)
 ```dart
-import 'package:attendance/core/config/typedefs.dart';
-import 'package:attendance/core/config/usecase.dart';
+import 'package:app_starter/core/config/typedefs.dart';
+import 'package:app_starter/core/config/usecase.dart';
 
 class {ActionName}Usecase extends UsecaseWithParams<ReturnType, ParamsTypeRequest> {
   const {ActionName}Usecase(this._repo);
@@ -138,7 +230,7 @@ class ParamsTypeRequest {
 
 ### Data Model
 ```dart
-import 'package:attendance/src/{feature}/domain/entity/{entity_name}.dart';
+import 'package:app_starter/src/{feature}/domain/entities/{entity_name}.dart';
 
 class {EntityName}Model extends {EntityName} {
   {EntityName}Model({required super.id, required super.name});
@@ -152,10 +244,23 @@ class {EntityName}Model extends {EntityName} {
 ```
 
 ### Data Remote DataSource
+The interface and implementation live in **separate files**:
+- `{feature_name}_remote_datasrc.dart` — abstract interface only
+- `{feature_name}_remote_datasrc_impl.dart` — implementation only, imports the interface file
+
+**Interface (`{feature_name}_remote_datasrc.dart`):**
 ```dart
-import 'package:attendance/core/config/mixins/network_handler.dart';
-import 'package:attendance/core/constants/network_constants.dart';
+abstract interface class {FeatureName}RemoteDataSrc {
+  Future<List<{EntityName}>> getAll();
+}
+```
+
+**Implementation (`{feature_name}_remote_datasrc_impl.dart`):**
+```dart
 import 'package:dio/dio.dart';
+import 'package:app_starter/core/constants/network_constants.dart';
+import 'package:app_starter/core/mixins/network_handler.dart';
+import '{feature_name}_remote_datasrc.dart';
 
 class {FeatureName}RemoteDataSrcImpl
     with NetworkCallHandler
@@ -164,31 +269,23 @@ class {FeatureName}RemoteDataSrcImpl
   final Dio _dio;
 
   @override
-  Future<List<{EntityName}>> getAll() async {
-    final header = await NetworkConstants.getHeaders();
-
-    return handleNetworkCall<List<{EntityName}>>(
-      call: () => _dio.get(
-        '${url}/{endpoint}',
-        options: Options(headers: header),
-      ),
-      onSuccess: (response) {
-        final data = response.data[NetworkConstants.dataParam] as List;
-        return data.map((item) => {EntityName}Model.fromJson(item)).toList();
-      },
-    );
-  }
-}
-
-abstract class {FeatureName}RemoteDataSrc {
-  Future<List<{EntityName}>> getAll();
+  Future<List<{EntityName}>> getAll() =>
+      handleNetworkCall<List<{EntityName}>>(
+        call: () => _dio.get('/{endpoint}'),
+        onSuccess: (response) {
+          final data = response.data[NetworkConstants.dataParam] as List;
+          return data.map((item) => {EntityName}Model.fromJson(item)).toList();
+        },
+      );
 }
 ```
 
+> The same naming rule applies to any datasource: the concrete class file always ends with `_impl.dart`.
+
 ### Data Repository Implementation
 ```dart
-import 'package:attendance/core/config/mixins/error_handler.dart';
-import 'package:attendance/core/config/typedefs.dart';
+import 'package:app_starter/core/mixins/error_handler.dart';
+import 'package:app_starter/core/config/typedefs.dart';
 
 class {FeatureName}RepoImpl with ErrorHandler implements {FeatureName}Repo {
   const {FeatureName}RepoImpl(this._remoteDataSource);
@@ -209,63 +306,129 @@ part of '{cubit_name}_cubit.dart';
 sealed class {CubitName}State with _${CubitName}State {
   const factory {CubitName}State.initial() = _initialState;
   const factory {CubitName}State.loading() = _loadingState;
-  const factory {CubitName}State.failed({required String message}) = _failedState;
+  const factory {CubitName}State.failed({required Failure failure}) = _failedState;
   const factory {CubitName}State.success({required DataType data}) = _successState;
 }
 ```
 
 ### Presentation Cubit
 ```dart
-import 'package:attendance/core/config/mixins/failure_popups.dart';
-import 'package:attendance/core/utils/util_functions.dart';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:app_starter/core/utils/util_functions.dart';
 
 part '{cubit_name}_state.dart';
 part '{cubit_name}_cubit.freezed.dart';
 
-class {CubitName}Cubit extends Cubit<{CubitName}State> with FailurePopups {
+class {CubitName}Cubit extends Cubit<{CubitName}State> {
   final {UsecaseName} _{usecaseName};
 
   {CubitName}Cubit({required {UsecaseName} {usecaseName}})
       : _{usecaseName} = {usecaseName},
         super({CubitName}State.initial());
 
-  Future<void> {methodName}(bool isEn) async {
+  Future<void> {methodName}() async {
     UtilFunctions.appLog("{methodName}:");
     emit({CubitName}State.loading());
 
     final result = await _{usecaseName}();
 
     result.fold(
-      (failure) {
-        final message = getFailureMessage(failure, isEn);
-        emit({CubitName}State.failed(message: message));
-      },
-      (data) {
-        emit({CubitName}State.success(data: data));
-      },
+      (failure) => emit({CubitName}State.failed(failure: failure)),
+      (data) => emit({CubitName}State.success(data: data)),
     );
   }
 }
 ```
 
-### Dependency Injection
+### Presentation View — providing a screen-scoped cubit
+
+A cubit the screen owns is provided **above** the widget that uses it. Splitting the view in
+two is what makes that possible: the public `StatelessWidget` provides, a private
+`_{ViewName}Body` consumes. Providing inside the stateful widget's own `build` puts the cubit
+below the `State`, so `context.read<{CubitName}Cubit>()` from `initState`, `dispose` or any
+handler method throws `ProviderNotFoundException`.
+
 ```dart
-Future<void> _{featureName}Init() async {
-  sl
-    // Use Cases
-    ..registerLazySingleton(() => {ActionName}Usecase(sl()))
-    // Repository
-    ..registerLazySingleton<{FeatureName}Repo>(
-      () => {FeatureName}RepoImpl(sl()),
-    )
-    // Data Source
-    ..registerLazySingleton<{FeatureName}RemoteDataSrc>(
-      () => {FeatureName}RemoteDataSrcImpl(sl()),
+class {FeatureName}View extends StatelessWidget {
+  static const String path = '/{feature-name}';
+
+  const {FeatureName}View({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<{CubitName}Cubit>(
+      create: (BuildContext context) => sl<{CubitName}Cubit>(),
+      child: const _{FeatureName}ViewBody(),
     );
+  }
+}
+
+class _{FeatureName}ViewBody extends StatefulWidget {
+  const _{FeatureName}ViewBody();
+
+  @override
+  State<_{FeatureName}ViewBody> createState() => _{FeatureName}ViewBodyState();
+}
+
+class _{FeatureName}ViewBodyState extends State<_{FeatureName}ViewBody> {
+  // Controllers, form keys and local flags live here — never the cubit.
+
+  void _submit() => context.read<{CubitName}Cubit>().{methodName}();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<{CubitName}Cubit, {CubitName}State>(
+      listener: (BuildContext context, state) => state.whenOrNull(
+        failed: (failure) => UtilFunctions.showFailedToast(
+          message: failure.getFailureMessage(context),
+        ),
+      ),
+      child: const Scaffold(),
+    );
+  }
 }
 ```
+
+Rules that follow from it:
+
+- **`create:`, never `BlocProvider.value`.** `create:` hands the cubit's lifetime to the
+  provider. `.value` is for re-providing a cubit that something else already owns — there is
+  no such case in this codebase.
+- **Never hold the cubit in a `State` field**, and never call `close()` on it. The provider
+  closes what it created; a manual `close()` in `dispose` is a double-close waiting to happen.
+  `dispose` is for controllers and `ValueNotifier`s only.
+- Several cubits → `MultiBlocProvider` in the same wrapper. Several listeners →
+  `MultiBlocListener` inside the body.
+- Cubits that outlive the screen are already global: they come from the registries in
+  `lib/core/providers/`, so do not re-provide them here.
+
+### Dependency Injection
+Registration is **generated** by `injectable`; nothing is written into
+`injection_container.dart` for a feature. Annotate each class where it is declared:
+
+```dart
+// datasource impl — registered *as* its interface
+@LazySingleton(as: {FeatureName}RemoteDataSrc)
+class {FeatureName}RemoteDataSrcImpl with NetworkCallHandler
+    implements {FeatureName}RemoteDataSrc { ... }
+
+// repo impl — registered *as* its interface
+@LazySingleton(as: {FeatureName}Repo)
+class {FeatureName}RepoImpl with ErrorHandler implements {FeatureName}Repo { ... }
+
+// usecase — concrete, one shared instance
+@lazySingleton
+class {ActionName}Usecase extends UsecaseWithParams<...> { ... }
+
+// cubit — fresh instance per resolution
+@injectable
+class {CubitName}Cubit extends Cubit<{CubitName}State> { ... }
+```
+
+Then regenerate: `dart run build_runner build`. Constructor parameters are resolved by
+type, so an interface-typed parameter (`{FeatureName}Repo`) finds the impl registered
+`as:` it. Import `package:injectable/injectable.dart` in each annotated file.
 
 ## Implementation Process
 
@@ -321,15 +484,18 @@ Once the plan is approved:
 
 3. **Create Presentation Layer**:
    - Create cubit state with Freezed
-   - Create cubit with FailurePopups mixin
-   - Run: `dart run build_runner build --delete-conflicting-outputs`
+   - Create cubit (no mixin — emit the full `Failure` in the failed state)
+   - Run: `dart run build_runner build`
 
 4. **Setup Dependency Injection**:
-   - Add registration in `lib/core/services/injection_container.main.dart`
-   - Call init function in `splashInit()`
+   - Annotate: `@LazySingleton(as: Interface)` on datasource and repo impls,
+     `@lazySingleton` on usecases, `@injectable` on cubits
+   - Run `dart run build_runner build` — `injection_container.config.dart` is regenerated;
+     nothing is edited by hand
 
 5. **Create UI**:
-   - Create views with BlocProvider
+   - Create views with BlocProvider — the `StatelessWidget` provides, a private stateful body
+     consumes (see **Presentation View**)
    - Create widgets as needed
 
 6. **Update the plan document** with:
@@ -352,14 +518,21 @@ NEVER create custom validators. Use these from `lib/core/utils/form_validations.
 
 1. ❌ Creating custom validators
 2. ❌ Using `Localizations.localeOf(context)`
-3. ❌ Not including `bool isEn` in cubit methods
-4. ❌ Not using `getFailureMessage(failure, isEn)` for error messages
+3. ❌ Emitting a `String message` in the failed state instead of the full `Failure` object
+4. ❌ Calling `showToast` or `getFailureMessage` inside a cubit — call `state.failure.getFailureMessage(context)` in a `BlocListener` in the view instead
 5. ❌ Making models without extending entities
-6. ❌ Not using mixins (NetworkCallHandler, ErrorHandler, FailurePopups)
+5b. ❌ Branching on `isEn` in a widget to choose between an entity's `{field}En` / `{field}Ar` — put a resolving getter on the entity instead
+6. ❌ Not using mixins (NetworkCallHandler in datasources, ErrorHandler in repository impls)
 7. ❌ Multiple use cases in one cubit
 8. ❌ Not emitting loading state before async operations
 9. ❌ Not handling all state cases (initial, loading, success, failed)
 10. ❌ Forgetting to run build_runner after creating/modifying cubits
+11. ❌ Providing a cubit inside the stateful widget that consumes it — it lands below the
+    `State`, so `context.read` from a handler throws. Wrap with a `StatelessWidget` instead
+12. ❌ `BlocProvider.value` — use `create:`; `.value` re-provides a cubit someone else owns
+13. ❌ Keeping the cubit in a `State` field or calling `close()` on it in `dispose` — the
+    provider owns it
+14. ❌ Passing `Options(headers: ...)` to Dio calls — headers and base URL are globally configured via `AuthInterceptor` and `BaseOptions`; use relative paths only (e.g. `/api/v1/resource`)
 
 ## Plan Document Template
 
@@ -463,17 +636,20 @@ Brief description of the feature and its purpose.
 ```
 lib/src/{feature_name}/
 ├── data/
-│   ├── datasource/
-│   │   └── {feature_name}_remote_datasource.dart
+│   ├── datasources/
+│   │   ├── {feature_name}_remote_datasrc.dart       ← interface
+│   │   └── {feature_name}_remote_datasrc_impl.dart  ← implementation
 │   ├── models/
 │   │   └── {entity_name}_model.dart
-│   └── repo/
+│   └── repositories/
 │       └── {feature_name}_repo_impl.dart
 ├── domain/
-│   ├── entity/
+│   ├── entities/
 │   │   ├── {entity_name}.dart
-│   │   └── {entity_name}_request.dart
-│   ├── repo/
+│   │   ├── {entity_name}_request.dart
+│   │   └── extensions/
+│   │       └── {entity_name}_extension.dart
+│   ├── repositories/
 │   │   └── {feature_name}_repo.dart
 │   └── usecases/
 │       ├── get_all_{entities}_usecase.dart
@@ -515,37 +691,23 @@ lib/src/{feature_name}/
 
 ## 7. Dependency Injection Setup
 
-Location: `lib/core/services/injection_container.main.dart`
+No registration file to edit. Each class carries its own annotation and
+`dart run build_runner build` writes `lib/core/services/injection_container.config.dart`:
 
-```dart
-Future<void> _{featureName}Init() async {
-  sl
-    // Use Cases
-    ..registerLazySingleton(() => GetAll{Entities}Usecase(sl()))
-    ..registerLazySingleton(() => Get{Entity}ByIdUsecase(sl()))
-    ..registerLazySingleton(() => Create{Entity}Usecase(sl()))
-    ..registerLazySingleton(() => Update{Entity}Usecase(sl()))
-    ..registerLazySingleton(() => Delete{Entity}Usecase(sl()))
+| Layer | Annotation | Why |
+|---|---|---|
+| `{FeatureName}RemoteDataSrcImpl` | `@LazySingleton(as: {FeatureName}RemoteDataSrc)` | resolved by its interface |
+| `{FeatureName}RepoImpl` | `@LazySingleton(as: {FeatureName}Repo)` | resolved by its interface |
+| `GetAll{Entities}Usecase`, `Create{Entity}Usecase`, … | `@lazySingleton` | one shared, stateless instance |
+| `{CubitName}Cubit` | `@injectable` | fresh instance per screen |
+| A cubit that must outlive screens | `@lazySingleton` | only when it deliberately holds app-wide state |
 
-    // Repository
-    ..registerLazySingleton<{FeatureName}Repo>(
-      () => {FeatureName}RepoImpl(sl()),
-    )
+Third-party types and anything needing a hand-built argument (a `Dio` with interceptors,
+the list of analytics clients) go in `lib/core/services/register_module.dart` — the one
+`@module`. Do not add a second module per feature.
 
-    // Data Source
-    ..registerLazySingleton<{FeatureName}RemoteDataSrc>(
-      () => {FeatureName}RemoteDataSrcImpl(sl()),
-    );
-}
-```
-
-Add to `splashInit()`:
-```dart
-await Future.wait([
-  // ... other inits
-  _{featureName}Init(),
-]);
-```
+Flavor-specific implementations: add `@Environment('dev')` / `@Environment('prod')` next to
+the registration annotation; `configureDependencies()` passes `F.name` as the environment.
 
 ## 8. Testing Considerations
 
